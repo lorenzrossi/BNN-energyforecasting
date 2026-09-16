@@ -1,193 +1,142 @@
-# Italian Energy Generation Forecasting
+# Forecasting Italian electricity generation with neural networks
 
-A comprehensive machine learning project for forecasting Italian energy generation using neural networks. This project includes implementations in both TensorFlow and PyTorch, with support for frequentist and Bayesian approaches.
+Hourly forecasts of total electricity generation in Italy (ENTSO-E data, 2016-2021) with small
+feed-forward, LSTM and 1-D convolutional networks, plus a Bayesian MLP trained with Bayes by
+backprop that also gives a prediction interval. The code comes from my thesis; the
+`energyforecast` package is a rewrite of the thesis notebooks into one PyTorch code path, and the
+notebooks themselves are kept under `notebooks/original`.
 
-## 📋 Table of Contents
+## Data
 
-- [Overview](#overview)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-
-## 🎯 Overview
-
-This project implements time series forecasting models for Italian energy generation data (2016-2021). The models use a rolling window training approach to predict future energy generation based on historical patterns.
-
-### Key Components
-
-- **Data Preprocessing**: Automated pipeline for downloading, cleaning, and feature engineering
-- **Frequentist Models**: MLP, LSTM, and CNN implementations in TensorFlow and PyTorch
-- **Bayesian Models**: Bayesian neural network implementations (PyTorch)
-- **Unified Training**: Single notebooks for training all model configurations
-
-## 📁 Project Structure
-
-```
-Thesis/
-├── README.md                 # This file
-├── requirements.txt          # Python dependencies
-├── .gitignore               # Git ignore rules
-│
-└── src/                     # Source code
-    ├── data_preprocessing.py      # Main preprocessing module
-    ├── preprocessing_utils.py     # Original utility functions
-    ├── example_preprocessing.py   # Preprocessing examples
-    ├── DATA_DESC.ipynb            # Exploratory data analysis
-    │
-    ├── FREQ_NETS_TF/              # TensorFlow implementations
-    │   ├── models.py              # Model architectures
-    │   ├── trainer.py             # Training logic
-    │   ├── Unified_Training_Notebook.ipynb
-    │   ├── README.md
-    │   └── ...
-    │
-    ├── FREQ_NETS_TORCH/           # PyTorch implementations
-    │   ├── models.py              # Model architectures
-    │   ├── trainer.py             # Training logic
-    │   ├── Unified_Training_Notebook.ipynb
-    │   └── README.md
-    │
-    └── BAYES_NOTEBOOKS_PYTORCH/   # Bayesian models
-        └── ...
-```
-
-## 🚀 Installation
-
-### Prerequisites
-
-- Python 3.10+
-- pip or conda
-
-### Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Thesis
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Verify Installation
-
-```python
-import torch
-print(f"PyTorch: {torch.__version__}")
-print(f"MPS available: {torch.backends.mps.is_available()}")  # For Apple Silicon
-```
-
-## 🏃 Quick Start
-
-### 1. Preprocess Data
-
-```python
-from src.data_preprocessing import preprocess_pipeline
-
-# Download and preprocess data
-data = preprocess_pipeline(
-    data_path="data",
-    download_from_drive=True,
-    drive_folder_id="1fgXJNVg3MUu8Vx8kAthW4dAih9rKme2H",
-    years=[2019, 2020, 2021]
-)
-```
-
-### 2. Train a Model (PyTorch)
-
-```python
-from src.FREQ_NETS_TORCH.trainer import ModelTrainer
-
-trainer = ModelTrainer(
-    model_type='mlp',
-    feature_type='ts_only',
-    window_size=24,
-    n_forecast_steps=24,
-    epochs=100,
-    batch_size=168,
-    learning_rate=0.003,
-    device='mps'  # or 'cpu', 'cuda'
-)
-
-results = trainer.train(data, n_train=35064)
-print(f"RMSE: {results['overall_rmse']:.2f}")
-```
-
-### 3. Use Jupyter Notebooks
+The input files are the ENTSO-E "Actual Generation per Production Type" exports for Italy, one CSV
+per year (`ITA2016.csv` ... `ITA2021.csv`). They are not in the repository. Either download them
+from the transparency platform or, if you have access, from the Google Drive folder used for the
+thesis:
 
 ```bash
-jupyter notebook src/FREQ_NETS_TORCH/Unified_Training_Notebook.ipynb
+pip install gdown
+python -c "from energyforecast.data import download_from_drive; download_from_drive('1fgXJNVg3MUu8Vx8kAthW4dAih9rKme2H')"
 ```
 
-## ✨ Features
+Put the files in `data/`. `energyforecast.data.load_dataset` then:
 
-### Data Preprocessing
-- ✅ Automatic data download from Google Drive
-- ✅ Missing value handling with interpolation
-- ✅ Energy source aggregation
-- ✅ Temporal feature engineering (weekend, business hours)
-- ✅ Vectorized operations for efficiency
+- parses the MTU column (`01.01.2016 00:00 - 01.01.2016 01:00 (CET/CEST)`) as local time,
+- drops the duplicated hour of the autumn DST change and reindexes to a complete hourly range,
+- interpolates missing values (about 2,200 out of 52,608 hours),
+- sums the three hydro columns into `hydro_tot` and the two gas columns into `gas_tot`,
+- adds `total_aggregated` (sum over all sources) and the calendar dummies `saturday`, `sunday`,
+  `business_hour` (08:00-18:00).
 
-### Model Implementations
-- **MLP**: Multi-Layer Perceptron for time series forecasting
-- **LSTM**: Long Short-Term Memory networks
-- **CNN**: 1D Convolutional Neural Networks
-- **Bayesian**: Bayesian neural network variants
+The target everywhere is `total_aggregated`.
 
-### Training Features
-- Rolling window training approach
-- Early stopping
-- Multiple feature combinations (time series only, weekend dummies, business hour)
-- Comprehensive evaluation metrics (RMSE, MAE, R²)
-- GPU support (CUDA, MPS for Apple Silicon)
+## Install
 
-## 📚 Documentation
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .              # numpy, pandas, torch
+pip install -e ".[notebooks]" # matplotlib, seaborn, statsmodels, jupyter, ...
+```
 
-- **[Data Preprocessing](src/README.md)**: Detailed preprocessing documentation
-- **[TensorFlow Models](src/FREQ_NETS_TF/README.md)**: TensorFlow implementation guide
-- **[PyTorch Models](src/FREQ_NETS_TORCH/README.md)**: PyTorch implementation guide with detailed examples
+The thesis notebooks in `notebooks/original` additionally need `tensorflow` (MLP, LSTM, CNN) or
+`blitz-bayesian-pytorch` (Bayesian MLP); see the `tensorflow` and `blitz` extras.
 
-## 🔧 Requirements
+## Usage
 
-See `requirements.txt` for full list. Key dependencies:
-- PyTorch >= 2.0.0 (with MPS support for macOS)
-- TensorFlow >= 2.0.0
-- NumPy, Pandas
-- scikit-learn
-- Matplotlib
-- Jupyter
+Command line:
 
-## 📊 Data
+```bash
+energyforecast --model cnn --features business_hour        # one configuration
+energyforecast --model bmlp --features weekend --window 24   # Bayesian MLP with 24 lags
+energyforecast --model all --features all --seed 0           # full grid, writes results/summary.csv
+energyforecast --max-periods 5 --epochs 10                   # quick check
+```
 
-The project uses Italian energy generation data from 2016-2021, available via Google Drive. The preprocessing pipeline handles:
-- Multiple energy sources (biomass, coal, gas, hydro, solar, wind, etc.)
-- Temporal features (hour, weekday, weekend, business hours)
-- Aggregated totals
+Python:
 
-## 🤝 Contributing
+```python
+from energyforecast import load_dataset, RollingForecaster, BayesianRollingForecaster
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+data = load_dataset("data")
 
-## 📝 License
+cnn = RollingForecaster("cnn", "business_hour", window=2, seed=0)
+result = cnn.run(data, n_train=35064)
+print(result.rmse, result.mae, result.r2)
 
-[Add your license here]
+bayes = BayesianRollingForecaster("business_hour", window=24, epochs=5)
+result = bayes.run(data, n_train=35064)
+print(result.rmse, result.coverage)
+result.frame()  # truth, prediction, std, lower, upper
+```
 
-## 🙏 Acknowledgments
+`notebooks/train_all_models.ipynb` runs the whole grid and plots the forecasts;
+`notebooks/data_exploration.ipynb` is the descriptive analysis of the series.
 
-- Italian energy data sources
-- PyTorch and TensorFlow communities
+## Method
 
----
+Evaluation is rolling-origin. The first `n_train` hours (35,064 = 2016-2019) are the initial
+training window. The model is fitted on that window, forecasts the next 24 hours, then the oldest
+24 hours are dropped from the window, the 24 observed hours are appended, and training continues
+from the current weights. This repeats until the end of 2021. The RMSE reported is over all
+one-day-ahead forecasts of the test period, in MW.
 
-For detailed usage examples, see the README files in each subdirectory.
+Inputs are lagged values of the target, standardised with the mean and standard deviation of the
+initial training window, optionally concatenated with unscaled calendar dummies. Three feature
+sets are compared: `ts_only`, `weekend` (Saturday and Sunday dummies) and `business_hour`.
+
+| Model | Input | Architecture | Optimiser |
+|---|---|---|---|
+| `mlp` | last `window` lags + dummies | 2 x Linear(10) + ReLU, Linear(1) | Adam 3e-3, MSE, early stopping (patience 3) |
+| `lstm` | sequence of `window` steps, each (target + dummies) | 2 stacked LSTM(10), flatten, Linear(1) | same |
+| `cnn` | same sequence layout | 2 x Conv1d(16, kernel 1) + ReLU, flatten, Linear(1) | same |
+| `bmlp` | as `mlp` | 2 x BayesianLinear(10) + ReLU, BayesianLinear(1) | Adam 1e-2, ELBO (5 weight samples), 5 epochs per period |
+
+The Bayesian layers follow Blundell et al. (2015): Gaussian variational posterior per weight,
+scale-mixture Gaussian prior, KL term estimated by Monte Carlo and weighted by 1/N. Prediction is
+the mean of 100 forward passes; the interval is mean +/- 3 standard deviations of those passes. The
+interval captures uncertainty about the weights only, so its empirical coverage is well below the
+nominal Gaussian value.
+
+Default windows are 24 lags for `mlp` and 1 for `bmlp`, a sequence length of 1 for `lstm` and 2
+for `cnn`; all can be changed with `--window`.
+
+## Results from the thesis notebooks
+
+RMSE in MW over the test period, as reported in `notebooks/original` (TensorFlow for the point
+models, blitz for the Bayesian one). The MLP `ts_only` run used lag 24 only; the other MLP runs used
+lag 1 plus the dummies. The Bayesian runs used lag 1 (`ts_only`, `weekend`) or 24 lags
+(`business_hour`) and forecast one week per period instead of one day. Coverage is the share of
+observations inside the interval (5 standard deviations for the first two, 3 for the third).
+
+| Model | ts_only | weekend | business_hour |
+|---|---|---|---|
+| MLP | 4907 | 2717 | 2939 |
+| LSTM | 3181 | 2679 | 2569 |
+| CNN | 2854 | 2393 | 1359 |
+| Bayesian MLP | 2054 (coverage 0.42) | 2044 (0.30) | 1130 (0.52) |
+
+These numbers come from the notebooks as they were run for the thesis, on a local copy of the data.
+The package reproduces the protocol but not the exact runs: preprocessing was rewritten (date
+parsing, DST handling, interpolation), the Bayesian notebooks retrained on the initial window
+every period instead of the sliding one (the package slides it), and the random seeds differ.
+Rerun `energyforecast --model all --features all` to get numbers for the current code.
+
+## Layout
+
+```
+energyforecast/
+  data.py        load and preprocess the ENTSO-E files
+  windows.py     lag matrices, sequence windows, target scaling
+  models.py      MLP, LSTM, CNN
+  bayesian.py    BayesianLinear, BayesianMLP, ELBO
+  training.py    rolling-origin trainer, result container, grid runner
+  cli.py         command line interface
+notebooks/
+  data_exploration.ipynb    descriptive analysis (outputs kept)
+  train_all_models.ipynb    runs the grid with the package
+  original/                 thesis notebooks, outputs stripped, data loading replaced by the package
+```
+
+## Reference
+
+Blundell, C., Cornebise, J., Kavukcuoglu, K., Wierstra, D. (2015). Weight uncertainty in neural
+networks. ICML. https://arxiv.org/abs/1505.05424

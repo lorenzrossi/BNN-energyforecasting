@@ -1,51 +1,19 @@
-# Python virtual environments
-/.venv
-/venv
-/env
-ENV/
-env.bak/
-venv.bak/
-
-# Conda environments
-.conda/
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# Python cache
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
+build/
+dist/
 
-# PyTorch model files (optional - uncomment if you don't want to track models)
-# *.pth
-# *.pt
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
 
-# Data directories
 data/
 results/
 *.csv
-
-# Model checkpoints (uncomment if you don't want to track trained models)
-# *.pth
-# *.pt
-# *.h5
+*.pth
+*.h5
