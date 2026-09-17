@@ -9,14 +9,8 @@ notebooks themselves are kept under `notebooks/original`.
 ## Data
 
 The input files are the ENTSO-E "Actual Generation per Production Type" exports for Italy, one CSV
-per year (`ITA2016.csv` ... `ITA2021.csv`). They are not in the repository. Either download them
-from the transparency platform or, if you have access, from the Google Drive folder used for the
-thesis:
-
-```bash
-pip install gdown
-python -c "from energyforecast.data import download_from_drive; download_from_drive('1fgXJNVg3MUu8Vx8kAthW4dAih9rKme2H')"
-```
+per year (`ITA2016.csv` ... `ITA2021.csv`). They are not in the repository. They are public and you can download them
+from the transparency platform 
 
 Put the files in `data/`. `energyforecast.data.load_dataset` then:
 
@@ -38,7 +32,7 @@ pip install -e ".[notebooks]" # matplotlib, seaborn, statsmodels, jupyter, ...
 ```
 
 The thesis notebooks in `notebooks/original` additionally need `tensorflow` (MLP, LSTM, CNN) or
-`blitz-bayesian-pytorch` (Bayesian MLP); see the `tensorflow` and `blitz` extras.
+`blitz-bayesian-pytorch` (Bayesian MLP); see the `tensorflow` and `blitz` extras. The updated documentation is entirely in PyTorch and doesn't need those packages/framework. 
 
 ## Usage
 
@@ -101,10 +95,7 @@ for `cnn`; all can be changed with `--window`.
 
 ## Results from the thesis notebooks
 
-RMSE in MW over the test period, as reported in `notebooks/original` (TensorFlow for the point
-models, blitz for the Bayesian one). The MLP `ts_only` run used lag 24 only; the other MLP runs used
-lag 1 plus the dummies. The Bayesian runs used lag 1 (`ts_only`, `weekend`) or 24 lags
-(`business_hour`) and forecast one week per period instead of one day. Coverage is the share of
+RMSE in MW over the test period, as reported in `notebooks/original`. The MLP `ts_only` run used 24 lags only; the other MLP runs used the lags plus the dummies (`weekend`, `business_hour`). The Bayesian runs use the same distinctions (`ts_only`, `weekend`, `business_hour`). Coverage is the share of
 observations inside the interval (5 standard deviations for the first two, 3 for the third).
 
 | Model | ts_only | weekend | business_hour |
@@ -114,11 +105,7 @@ observations inside the interval (5 standard deviations for the first two, 3 for
 | CNN | 2854 | 2393 | 1359 |
 | Bayesian MLP | 2054 (coverage 0.42) | 2044 (0.30) | 1130 (0.52) |
 
-These numbers come from the notebooks as they were run for the thesis, on a local copy of the data.
-The package reproduces the protocol but not the exact runs: preprocessing was rewritten (date
-parsing, DST handling, interpolation), the Bayesian notebooks retrained on the initial window
-every period instead of the sliding one (the package slides it), and the random seeds differ.
-Rerun `energyforecast --model all --features all` to get numbers for the current code.
+Rerun `energyforecast --model all --features all` if you want to change the parameters and obtain new results.
 
 ## Layout
 
